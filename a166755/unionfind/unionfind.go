@@ -1,5 +1,7 @@
 package unionfind
 
+import ()
+
 // Identify a cell by its layer (size of the grid)
 // and position (counting from lower-left to upper-right
 // around the border.)
@@ -36,6 +38,8 @@ func (u *UnionFind) Find(key Cell) Cell {
 }
 
 func (u *UnionFind) Union(a Cell, b Cell) {
+	// fmt.Printf("Union: %v and %v\n", a, b)
+
 	aRoot := u.Find(a)
 	bRoot := u.Find(b)
 	aRank := u.rank[aRoot]
