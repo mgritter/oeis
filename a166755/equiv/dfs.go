@@ -124,6 +124,12 @@ func EdgeClassForGrid(n int, squares [][]int) *GridBoundary {
 
 	if numComponents == 1 {
 		ret.SolidColor = true
+		for _, v := range colors {
+			if v != colors[0] {
+				ret.SolidColor = false
+				break
+			}
+		}
 	}
 
 	return ret

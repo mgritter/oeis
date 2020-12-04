@@ -46,15 +46,22 @@ type Cell = unionfind.Cell
 
 // Expand the border and return the normalized GridBoundary.
 // the argument is a map of position -> 0 for white, 1 for black
-func (g *GridBoundary) Expand(newBorder map[int]int) *GridBoundary {
+func (g *GridBoundary) Expand(newBorder []int) *GridBoundary {
 	if len(newBorder) != 2*g.Size+1 {
-		panic("incomplete border map")
+		panic("incomplete border")
+	}
+
+	// Convert position to slice offset
+	// New border runs from -g.Size to +g.Size
+	getBorder := func(i int) int {
+		return newBorder[i+g.Size]
 	}
 
 	// use union-find to track partitions
 	uf := unionfind.NewUnionFind()
 
 	// FIXME: keep this in the GridBoundary object?
+	// FIXME: convert to slice?
 	colorMap := make(map[int]int)
 
 	for i := -(g.Size - 1); i <= g.Size-1; i++ {
@@ -89,13 +96,13 @@ func (g *GridBoundary) Expand(newBorder map[int]int) *GridBoundary {
 	// New bottom cells
 	for i := -g.Size; i < 0; i++ {
 		// Same color as cell above?
-		if newBorder[i] == colorMap[i+1] {
+		if getBorder(i) == colorMap[i+1] {
 			uf.Union(Cell{g.Size + 1, i},
 				Cell{g.Size, i + 1})
 		}
 		// Same color as cell to the right?
 		// (Including corner.)
-		if newBorder[i] == newBorder[i+1] {
+		if getBorder(i) == getBorder(i+1) {
 			uf.Union(Cell{g.Size + 1, i},
 				Cell{g.Size + 1, i + 1})
 		}
@@ -104,13 +111,13 @@ func (g *GridBoundary) Expand(newBorder map[int]int) *GridBoundary {
 	// New right cells
 	for i := 1; i <= g.Size; i++ {
 		// Same color as cell to the left?
-		if newBorder[i] == colorMap[i-1] {
+		if getBorder(i) == colorMap[i-1] {
 			uf.Union(Cell{g.Size + 1, i},
 				Cell{g.Size, i - 1})
 		}
 		// Same color as cell below?
 		// (Including corner.)
-		if newBorder[i] == newBorder[i-1] {
+		if getBorder(i) == getBorder(i-1) {
 			uf.Union(Cell{g.Size + 1, i},
 				Cell{g.Size + 1, i - 1})
 		}
@@ -121,7 +128,7 @@ func (g *GridBoundary) Expand(newBorder map[int]int) *GridBoundary {
 
 	for i := -g.Size; i <= g.Size; i++ {
 		r := uf.Find(Cell{g.Size + 1, i})
-		if newBorder[i] == 0 {
+		if getBorder(i) == 0 {
 			whiteMap[r] = append(whiteMap[r], i)
 		} else {
 			blackMap[r] = append(blackMap[r], i)

@@ -99,7 +99,7 @@ func exhaustiveCount(n int) Count {
 
 	var total Count
 	for c := range results {
-		fmt.Printf("Worker: %v\n", c)
+		//fmt.Printf("Worker: %v\n", c)
 		total.Valid += c.Valid
 		total.NotValid += c.NotValid
 	}

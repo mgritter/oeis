@@ -36,16 +36,7 @@ func TestGrid_ExpandExample(t *testing.T) {
 	// .X..
 	// .X.X
 
-	boundary := map[int]int{
-		-3: 0,
-		-2: 1,
-		-1: 0,
-		0:  1,
-		1:  0,
-		2:  1,
-		3:  0,
-	}
-
+	boundary := []int{0, 1, 0, 1, 0, 1, 0}
 	after := GridBoundary{
 		4,
 		false,
@@ -100,12 +91,17 @@ func TestGrid_5x5(t *testing.T) {
 	invariant := func(grid [][]int) bool {
 		class4 := EdgeClassForGrid(4, grid)
 		class5 := EdgeClassForGrid(5, grid)
-		boundary := make(map[int]int)
+		boundary := make([]int, 9)
 		for x := 0; x <= 4; x++ {
-			boundary[x-4] = grid[4][x]
+			boundary[x] = grid[4][x]
+			// 0 1 2 3 4
 		}
 		for y := 0; y < 4; y++ {
-			boundary[4-y] = grid[y][4]
+			boundary[8-y] = grid[y][4]
+			//         8
+			//         7
+			//         6
+			//         5
 		}
 		t.Logf("Grid:\n%v", ShowGrid(5, grid))
 		t.Logf("4x4 class:\n%v", class4.Plot())
