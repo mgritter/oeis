@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"sort"
 	"strconv"
 
 	"net/http"
@@ -48,6 +49,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("equivalence class enumeration not implemented yet")
-
+	// This is a bit silly, we have to generate all smaller cases anyway.
+	sort.Ints(cases)
+	equivalenceClassEnumeration(cases)
 }

@@ -183,7 +183,7 @@ func (g *GridBoundary) MakeCanonical() {
 func (g *GridBoundary) Key() string {
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("%d", g.Size))
-	if len(g.White.Sets) == 0 {
+	if len(g.Black.Sets) == 0 {
 		if g.SolidColor {
 			buf.WriteString(":solid")
 		} else {
