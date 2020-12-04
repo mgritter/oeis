@@ -30,7 +30,7 @@ func main() {
 
 	go http.ListenAndServe("localhost:5432", nil)
 
-	cases := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	cases := []int{2, 3, 4, 5, 6, 7, 8, 9, 10}
 	if len(flag.Args()) > 0 {
 		cases = []int{}
 		for _, txt := range flag.Args() {

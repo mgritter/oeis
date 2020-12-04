@@ -8,17 +8,12 @@ import (
 	"github.com/mgritter/oeis/a166755/equiv"
 )
 
-func hasTwoRegions(n int, grid map[int]int) bool {
-	colors := make(map[equiv.Coord]int)
-
-	for y := 1; y <= n; y++ {
-		for x := 1; x <= n; x++ {
-			colors[equiv.Coord{x, y}] = grid[(y-1)*n+x]
-		}
+func hasTwoRegions(n int, grid combinations.IndicatorMap) bool {
+	visited := make([]bool, n*n)
+	if len(grid.Values) != n*n {
+		panic("grid is wrong size")
 	}
-	// fmt.Printf("Grid: %v\n", colors)
-
-	visited := make(map[equiv.Coord]bool)
+	colors := grid.Values
 
 	numComponents := 0
 	for y := 1; y <= n; y++ {
@@ -55,8 +50,9 @@ func exhaustiveWorker(n int, inputs <-chan combinations.IndicatorMap, result cha
 
 func exhaustiveCount(n int) Count {
 	cells := make([]combinations.SetGenerator, n*n)
+	config := combinations.IndicatorConfig{n * n, 0}
 	for i := 0; i < n*n; i++ {
-		cells[i] = &combinations.FreeChoice{i + 1}
+		cells[i] = &combinations.FreeChoice{config, i}
 	}
 
 	allGrids := make(chan combinations.IndicatorMap, *NumWorkers*2)

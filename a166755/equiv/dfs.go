@@ -37,19 +37,23 @@ func (curr Coord) Neighbors(size int) []Coord {
 	return nn
 }
 
-func ConnectedComponentDFS(size int, colors map[Coord]int, start Coord, visited map[Coord]bool) []Coord {
+func (c Coord) Index(size int) int {
+	return (c.Y-1)*size + (c.X - 1)
+}
+
+func ConnectedComponentDFS(size int, colors []int, start Coord, visited []bool) []Coord {
 	component := make([]Coord, 0)
 
 	var dfs func(Coord)
 	dfs = func(curr Coord) {
-		if visited[curr] {
+		if visited[curr.Index(size)] {
 			return
 		}
 		component = append(component, curr)
-		visited[curr] = true
+		visited[curr.Index(size)] = true
 
 		for _, n := range curr.Neighbors(size) {
-			if colors[n] == colors[curr] {
+			if colors[n.Index(size)] == colors[curr.Index(size)] {
 				dfs(n)
 			}
 		}
@@ -59,19 +63,19 @@ func ConnectedComponentDFS(size int, colors map[Coord]int, start Coord, visited 
 	return component
 }
 
-func GridToMap(n int, squares [][]int) map[Coord]int {
-	colors := make(map[Coord]int, n*n)
+func FlattenGrid(n int, squares [][]int) []int {
+	colors := make([]int, n*n)
 	for y := 0; y < n; y++ {
 		for x := 0; x < n; x++ {
-			colors[Coord{x + 1, y + 1}] = squares[y][x]
+			colors[y*n+x] = squares[y][x]
 		}
 	}
 	return colors
 }
 
 func EdgeClassForGrid(n int, squares [][]int) *GridBoundary {
-	colors := GridToMap(n, squares)
-	visited := make(map[Coord]bool)
+	colors := FlattenGrid(n, squares)
+	visited := make([]bool, n*n)
 
 	ret := &GridBoundary{
 		Size:       n,
@@ -107,14 +111,14 @@ func EdgeClassForGrid(n int, squares [][]int) *GridBoundary {
 	for x := 1; x <= n; x++ {
 		addComponent(
 			ConnectedComponentDFS(n, colors, Coord{x, n}, visited),
-			colors[Coord{x, n}],
+			colors[Coord{x, n}.Index(n)],
 		)
 	}
 
 	for y := 1; y < n; y++ {
 		addComponent(
 			ConnectedComponentDFS(n, colors, Coord{n, y}, visited),
-			colors[Coord{n, y}],
+			colors[Coord{n, y}.Index(n)],
 		)
 	}
 
