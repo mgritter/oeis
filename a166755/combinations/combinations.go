@@ -1,5 +1,7 @@
 package combinations
 
+import ()
+
 // FIXME: making a copy each time might be expensive,
 // as is merging with other maps, so maybe some sort of
 // custom data structure is in order.
@@ -81,7 +83,21 @@ func (f *FreeChoice) Enumerate(out chan<- IndicatorMap) {
 
 func Product(sets []SetGenerator, out chan<- IndicatorMap) {
 	chosen := make(IndicatorMap)
+	ProductWithPrefix(chosen, sets, out)
+	close(out)
+}
 
+func ProductList(sets []SetGenerator) []IndicatorMap {
+	ch := make(chan IndicatorMap)
+	result := make([]IndicatorMap, 0)
+	go Product(sets, ch)
+	for m := range ch {
+		result = append(result, m)
+	}
+	return result
+}
+
+func ProductWithPrefix(chosen IndicatorMap, sets []SetGenerator, out chan<- IndicatorMap) {
 	var recurse func(int)
 	recurse = func(i int) {
 		ch := make(chan IndicatorMap)
@@ -102,5 +118,4 @@ func Product(sets []SetGenerator, out chan<- IndicatorMap) {
 	if len(sets) > 0 {
 		recurse(len(sets) - 1)
 	}
-	close(out)
 }
