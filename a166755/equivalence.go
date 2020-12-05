@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	//"sync"
+	"sync"
 
 	"github.com/mgritter/oeis/a166755/combinations"
 	"github.com/mgritter/oeis/a166755/equiv"
@@ -138,6 +138,20 @@ func EnumerateChildren(gb *equiv.GridBoundary, count uint64, out chan<- Equivale
 	}
 }
 
+func equivalenceClassEnumerator(workQueue <-chan EquivalentGrids, results chan<- EquivalentGrids) {
+	for g := range workQueue {
+		EnumerateChildren(g.Boundary, g.Count, results)
+	}
+}
+
+func equivalenceClassAccumulator(size int, workQueue <-chan EquivalentGrids, results chan<- *EquivalenceClasses) {
+	ec := NewEquivalenceClasses(size)
+	for child := range workQueue {
+		ec.AddGrids(child)
+	}
+	results <- ec
+}
+
 func equivalenceClassEnumeration(cases []int) {
 	max := cases[len(cases)-1]
 	size := 1
@@ -146,19 +160,38 @@ func equivalenceClassEnumeration(cases []int) {
 	for size < max {
 		size += 1
 		prevEc := ec
-		ec = NewEquivalenceClasses(size)
 
-		for key, count := range prevEc.CountByClass {
-			// fmt.Printf("%v | %v \n", key, count)
-			ch := make(chan EquivalentGrids)
+		prevClasses := make(chan EquivalentGrids, 100)
+		newClasses := make(chan EquivalentGrids, 100)
+		newResult := make(chan *EquivalenceClasses)
+		var wg sync.WaitGroup
+		for i := 0; i < *NumWorkers; i++ {
+			wg.Add(1)
 			go func() {
-				defer close(ch)
-				EnumerateChildren(prevEc.Classes[key], count, ch)
+				defer wg.Done()
+				equivalenceClassEnumerator(prevClasses, newClasses)
 			}()
-			for child := range ch {
-				ec.AddGrids(child)
-			}
 		}
+
+		go func() {
+			wg.Wait()
+			close(newClasses)
+		}()
+
+		go func() {
+			for key, boundary := range prevEc.Classes {
+				count := prevEc.CountByClass[key]
+				prevClasses <- EquivalentGrids{boundary, count}
+			}
+			close(prevClasses)
+		}()
+
+		go func() {
+			equivalenceClassAccumulator(size, newClasses, newResult)
+			close(newResult)
+		}()
+
+		ec = <-newResult
 
 		fmt.Printf("\n N=%d | grids=%v | classes=%v \n\n", size, ec.CountValid, len(ec.Classes))
 	}
