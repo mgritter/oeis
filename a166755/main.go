@@ -16,6 +16,7 @@ var NumWorkers = flag.Int("numworkers", 8, "number of worker goroutines")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var RunExhaustive = flag.Bool("exhaustive", false, "use exhaustive enumeration")
 var RunSquare = flag.Bool("square", false, "use expanding squres")
+var Verbose = flag.Bool("verbose", false, "verbose output")
 
 func main() {
 	flag.Parse()
