@@ -286,3 +286,115 @@ func TestGrid_CanonicalIsInvariant(t *testing.T) {
 	properties.TestingRun(t)
 
 }
+
+func TestRectangle_CanonicalIsInvariant(t *testing.T) {
+	properties := gopter.NewProperties(nil)
+
+	makeCopy := func(g *GridRectangle) *GridRectangle {
+		t.Helper()
+		raw, err := copystructure.Copy(g)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw.(*GridRectangle)
+	}
+
+	n := 8
+	invariant := func(membership []int) bool {
+		// Interpret the n integers as tags indicating membership
+		// in a particular set for the edges. Some of the possible
+		// partitions are impossible, but we should arrive at a correct
+		// canonical representation anyway.
+		//
+		// Even numbers are assigned to white,
+		// Odd numbers are assigned to black.
+
+		members := make(map[int][]int)
+		for i, v := range membership {
+			members[v] = append(members[v], i)
+		}
+		white := make([][]int, 0)
+		black := make([][]int, 0)
+		for tag, edges := range members {
+			if tag%2 == 0 {
+				white = append(white, edges)
+			} else {
+				black = append(black, edges)
+			}
+		}
+
+		orig := GridRectangle{
+			n,
+			4,
+			false,
+			EdgePartition{white},
+			EdgePartition{black},
+		}
+
+		t.Logf("Testing %v plot %v", orig.Key(), orig.Plot())
+		unmodified := makeCopy(&orig)
+		unmodified.MakeCanonical()
+
+		colorSwap := makeCopy(&orig)
+		colorSwap.White, colorSwap.Black = colorSwap.Black, colorSwap.White
+		colorSwap.MakeCanonical()
+		if !reflect.DeepEqual(unmodified, colorSwap) {
+			t.Logf("color swap failed: %v != %v",
+				unmodified.Key(), colorSwap.Key())
+			return false
+		}
+
+		flip := makeCopy(&orig)
+		flip.White.MidpointFlip(n)
+		flip.Black.MidpointFlip(n)
+		flip.MakeCanonical()
+		if !reflect.DeepEqual(unmodified, flip) {
+			t.Logf("flip failed: %v != %v",
+				unmodified.Key(), flip.Key())
+			return false
+		}
+
+		bothSwap := makeCopy(&orig)
+		bothSwap.White, bothSwap.Black = colorSwap.Black.MidpointFlip(n), colorSwap.White.MidpointFlip(n)
+		bothSwap.MakeCanonical()
+		if !reflect.DeepEqual(unmodified, bothSwap) {
+			t.Logf("both swap failed: %v != %v",
+				unmodified.Key(), bothSwap.Key())
+			return false
+		}
+
+		for i := 0; i < len(orig.White.Sets)-1; i++ {
+			reorder := makeCopy(&orig)
+			reorder.White.Sets[i], reorder.White.Sets[i+1] =
+				reorder.White.Sets[i+1], reorder.White.Sets[i]
+			reorder.MakeCanonical()
+			if !reflect.DeepEqual(unmodified, reorder) {
+				t.Logf("set transposition failed: %v != %v",
+					unmodified.Key(), reorder.Key())
+				return false
+			}
+		}
+
+		for i := 0; i < len(orig.White.Sets); i++ {
+			reorder := makeCopy(&orig)
+			if len(reorder.White.Sets[i]) >= 2 {
+				s := reorder.White.Sets[i]
+				s[0], s[1] = s[1], s[0]
+				reorder.MakeCanonical()
+				if !reflect.DeepEqual(unmodified, reorder) {
+					t.Logf("set transposition failed: %v != %v",
+						unmodified.Key(), reorder.Key())
+					return false
+				}
+			}
+		}
+		return true
+
+	}
+	properties.Property("invariant under transformations",
+		prop.ForAll(invariant,
+			gen.SliceOfN(n, gen.IntRange(0, 2*n)),
+		))
+	properties.TestingRun(t)
+
+}

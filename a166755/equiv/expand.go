@@ -169,3 +169,104 @@ func (g *GridBoundary) Expand(newBorder []int) *GridBoundary {
 	ret.MakeCanonical()
 	return ret
 }
+
+// Expand the height by 1 and return the normalized GridRectangle
+// the argument is a map of position -> 0 for white, 1 for black
+func (g *GridRectangle) Expand(newBorder []int) *GridRectangle {
+	if len(newBorder) != g.Width {
+		panic("incomplete border")
+	}
+
+	// use union-find to track partitions
+	uf := unionfind.NewUnionFind()
+
+	// FIXME: keep this in the GridRectangle object?
+	colorMap := make([]int, g.Width)
+
+	for i := 0; i < g.Width; i++ {
+		uf.MakeSet(Cell{g.Height, i})
+		uf.MakeSet(Cell{g.Height + 1, i})
+	}
+
+	// Previous white cells
+	for _, s := range g.White.Sets {
+		firstElement := Cell{g.Height, s[0]}
+		colorMap[s[0]] = 0
+
+		for i := 1; i < len(s); i++ {
+			uf.Union(firstElement, Cell{g.Height, s[i]})
+			colorMap[s[i]] = 0
+		}
+	}
+
+	// Previous black cells
+	for _, s := range g.Black.Sets {
+		firstElement := Cell{g.Height, s[0]}
+		colorMap[s[0]] = 1
+		for i := 1; i < len(s); i++ {
+			uf.Union(firstElement, Cell{g.Height, s[i]})
+			colorMap[s[i]] = 1
+		}
+	}
+
+	// New bottom cells
+	for i := 0; i < g.Width; i++ {
+		// Same color as cell above?
+		if newBorder[i] == colorMap[i] {
+			uf.Union(Cell{g.Height, i},
+				Cell{g.Height + 1, i})
+		}
+		// Same color as cell to the left?
+		if i > 0 && newBorder[i] == newBorder[i-1] {
+			uf.Union(Cell{g.Height + 1, i},
+				Cell{g.Height + 1, i - 1})
+		}
+	}
+
+	whiteMap := make(map[Cell][]int)
+	blackMap := make(map[Cell][]int)
+
+	for i := 0; i < g.Width; i++ {
+		r := uf.Find(Cell{g.Height + 1, i})
+		if newBorder[i] == 0 {
+			whiteMap[r] = append(whiteMap[r], i)
+		} else {
+			blackMap[r] = append(blackMap[r], i)
+		}
+	}
+
+	white := make([]EdgeSet, 0, len(whiteMap))
+	black := make([]EdgeSet, 0, len(blackMap))
+
+	for _, s := range whiteMap {
+		white = append(white, s)
+	}
+
+	for _, s := range blackMap {
+		black = append(black, s)
+	}
+
+	// If there's a solid border it should not be partitioned into
+	// more than one set.
+	if len(white) == 0 && len(black) != 1 {
+		panic("bad solid border partition")
+	}
+	if len(black) == 0 && len(white) != 1 {
+		panic("bad solid border partition")
+	}
+
+	ret := &GridRectangle{
+		Width:      g.Width,
+		Height:     g.Height + 1,
+		SolidColor: false,
+		White:      EdgePartition{Sets: white},
+		Black:      EdgePartition{Sets: black},
+	}
+
+	if g.SolidColor && len(black) == 0 {
+		ret.SolidColor = true
+	}
+
+	ret.MakeCanonical()
+	return ret
+}

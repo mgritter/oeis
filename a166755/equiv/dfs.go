@@ -134,3 +134,70 @@ func EdgeClassForGrid(n int, squares [][]int) *GridBoundary {
 
 	return ret
 }
+
+func RectangleClassForGrid(width int, height int, squares [][]int) *GridRectangle {
+	// To re-use the DFS code that assumes a square grid we will
+	// pad the squares out.
+	colors := make([]int, width*width)
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			colors[y*width+x] = squares[y][x]
+		}
+	}
+	for y := height; y < width; y++ {
+		for x := 0; x < width; x++ {
+			colors[y*width+x] = -1
+		}
+	}
+	visited := make([]bool, width*width)
+
+	ret := &GridRectangle{
+		Width:      width,
+		Height:     height,
+		SolidColor: false,
+		White:      EdgePartition{Sets: make([][]int, 0)},
+		Black:      EdgePartition{Sets: make([][]int, 0)},
+	}
+
+	numComponents := 0
+
+	addComponent := func(component []Coord, color int) {
+		if len(component) == 0 {
+			return
+		}
+
+		numComponents += 1
+
+		edges := make([]int, 0)
+		for _, c := range component {
+			if c.Y == height {
+				edges = append(edges, c.X-1)
+			}
+		}
+
+		if color == 0 {
+			ret.White.Sets = append(ret.White.Sets, edges)
+		} else {
+			ret.Black.Sets = append(ret.Black.Sets, edges)
+		}
+	}
+
+	for x := 1; x <= width; x++ {
+		addComponent(
+			ConnectedComponentDFS(width, colors, Coord{x, height}, visited),
+			squares[height-1][x-1],
+		)
+	}
+
+	if numComponents == 1 {
+		ret.SolidColor = true
+		for _, v := range colors[:width*height] {
+			if v != colors[0] {
+				ret.SolidColor = false
+				break
+			}
+		}
+	}
+
+	return ret
+}

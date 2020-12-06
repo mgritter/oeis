@@ -139,7 +139,7 @@ type GridBoundary struct {
 }
 
 // MakeCanonical normalizes a grid boundary to its canonical value,
-// form which we can derive a label.
+// from which we can derive a label.
 func (g *GridBoundary) MakeCanonical() {
 	g.White.Sort()
 	g.Black.Sort()
@@ -167,8 +167,8 @@ func (g *GridBoundary) MakeCanonical() {
 			g.Black = g.Black.DiagonalFlip()
 			g.White = alt
 		case 0:
-			// If color-swap(W) = W, then we might
-			// have to tie-break on color-swap(B)
+			// If diag-flip(W) = W, then we might
+			// have to tie-break on diag-flip(B)
 			altBlack := g.Black.DiagonalFlip()
 			if altBlack.Compare(&g.Black) == -1 {
 				g.Black = altBlack

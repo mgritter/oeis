@@ -15,6 +15,7 @@ import (
 var NumWorkers = flag.Int("numworkers", 8, "number of worker goroutines")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var RunExhaustive = flag.Bool("exhaustive", false, "use exhaustive enumeration")
+var RunSquare = flag.Bool("square", false, "use expanding squres")
 
 func main() {
 	flag.Parse()
@@ -49,7 +50,12 @@ func main() {
 		return
 	}
 
-	// This is a bit silly, we have to generate all smaller cases anyway.
-	sort.Ints(cases)
-	equivalenceClassEnumeration(cases)
+	if *RunSquare {
+		// This is a bit silly, we have to generate all smaller cases anyway.
+		sort.Ints(cases)
+		equivalenceClassEnumeration(cases)
+		return
+	}
+
+	rectangleEnumeration(cases)
 }
