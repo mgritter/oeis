@@ -70,6 +70,16 @@ type SuccessorMap struct {
 	// For the current height, which classes are present
 	// and how many members do they have?
 	CountByClass map[string]EdgeClass
+
+	// Valid classes only
+	ValidClasses sync.Map
+}
+
+func (s *SuccessorMap) CheckValid(key string, gr *equiv.GridRectangle) {
+	numPartitions := len(gr.White.Sets) + len(gr.Black.Sets)
+	if numPartitions == 2 || (numPartitions == 1 && !gr.SolidColor) {
+		s.ValidClasses.Store(key, struct{}{})
+	}
 }
 
 func EnumerateRectangleChildren(gr *equiv.GridRectangle) []EdgeClass {
@@ -150,14 +160,15 @@ func (s *SuccessorMap) Worker(height int, workQueue <-chan *equiv.GridRectangle)
 			fmt.Printf("Expanding %v %v\n", c.Plot(), cKey)
 		}
 		expansions := EnumerateRectangleChildren(c)
-		s.SuccessorCounts.Store(c.Key(), expansions)
 
-		for _, e := range expansions {
+		for i, e := range expansions {
 			if _, ok := s.SuccessorCounts.Load(e.Key); !ok {
 				if e.Class.Height != height {
 					panic("new class lacks correct height")
 				}
 				s.NextClasses.Store(e.Key, e.Class)
+				s.CheckValid(e.Key, e.Class)
+
 				if *Verbose {
 					fmt.Printf(" %v %d %v NEW\n", e.Class.Plot(), e.Count, e.Key)
 				}
@@ -166,13 +177,18 @@ func (s *SuccessorMap) Worker(height int, workQueue <-chan *equiv.GridRectangle)
 					fmt.Printf(" %v %d %v\n", e.Class.Plot(), e.Count, e.Key)
 				}
 			}
+			// Throw away the class itself, so that we're normalized on
+			// what remains in NextClasses
+			expansions[i].Class = nil
 		}
+
+		// Store the low-cost list
+		s.SuccessorCounts.Store(c.Key(), expansions)
+
 	}
 }
 
 func (s *SuccessorMap) Iterate(height int) {
-	moreNewClasses := make(map[string]*equiv.GridRectangle)
-
 	for _, c := range s.NewClasses {
 		// Placeholder so that we don't trigger NEW again
 		s.SuccessorCounts.Store(c.Key(), []EdgeClass{})
@@ -195,7 +211,7 @@ func (s *SuccessorMap) Iterate(height int) {
 	close(workQueue)
 	wg.Wait()
 
-	s.NewClasses = make([]*equiv.GridRectangle, 0, len(moreNewClasses))
+	s.NewClasses = make([]*equiv.GridRectangle, 0)
 	s.NextClasses.Range(func(k, v interface{}) bool {
 		s.NewClasses = append(s.NewClasses, v.(*equiv.GridRectangle))
 		s.NextClasses.Delete(k)
@@ -358,11 +374,7 @@ func (s *SuccessorMap) ValidCount() *big.Int {
 	total := big.NewInt(0)
 
 	for k, v := range s.CountByClass {
-		numPartitions := len(v.Class.White.Sets) + len(v.Class.Black.Sets)
-		if numPartitions == 2 || (numPartitions == 1 && !v.Class.SolidColor) {
-			if *Verbose {
-				fmt.Printf("Valid: %d %v\n", v.Count, k)
-			}
+		if _, present := s.ValidClasses.Load(k); present {
 			total.Add(total, v.Count)
 		}
 	}
@@ -373,6 +385,7 @@ func rectangleEnumeration(cases []int) {
 	for _, width := range cases {
 
 		firstRow := startingClasses(width)
+
 		s := &SuccessorMap{
 			Width:        width,
 			NewClasses:   make([]*equiv.GridRectangle, 0, len(firstRow)),
@@ -381,6 +394,7 @@ func rectangleEnumeration(cases []int) {
 
 		for _, v := range firstRow {
 			s.NewClasses = append(s.NewClasses, v.Class)
+			s.CheckValid(v.Key, v.Class)
 		}
 		for height := 2; height <= width; height++ {
 			s.Iterate(height)

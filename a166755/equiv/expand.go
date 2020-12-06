@@ -178,33 +178,26 @@ func (g *GridRectangle) Expand(newBorder []int) *GridRectangle {
 	}
 
 	// use union-find to track partitions
-	uf := unionfind.NewUnionFind()
+	uf := unionfind.NewRowUnionFind(g.Width)
 
 	// FIXME: keep this in the GridRectangle object?
 	colorMap := make([]int, g.Width)
 
-	for i := 0; i < g.Width; i++ {
-		uf.MakeSet(Cell{g.Height, i})
-		uf.MakeSet(Cell{g.Height + 1, i})
-	}
-
 	// Previous white cells
 	for _, s := range g.White.Sets {
-		firstElement := Cell{g.Height, s[0]}
 		colorMap[s[0]] = 0
 
 		for i := 1; i < len(s); i++ {
-			uf.Union(firstElement, Cell{g.Height, s[i]})
+			uf.UnionCell(0, s[0], 0, s[i])
 			colorMap[s[i]] = 0
 		}
 	}
 
 	// Previous black cells
 	for _, s := range g.Black.Sets {
-		firstElement := Cell{g.Height, s[0]}
 		colorMap[s[0]] = 1
 		for i := 1; i < len(s); i++ {
-			uf.Union(firstElement, Cell{g.Height, s[i]})
+			uf.UnionCell(0, s[0], 0, s[i])
 			colorMap[s[i]] = 1
 		}
 	}
@@ -213,21 +206,19 @@ func (g *GridRectangle) Expand(newBorder []int) *GridRectangle {
 	for i := 0; i < g.Width; i++ {
 		// Same color as cell above?
 		if newBorder[i] == colorMap[i] {
-			uf.Union(Cell{g.Height, i},
-				Cell{g.Height + 1, i})
+			uf.UnionCell(0, i, 1, i)
 		}
 		// Same color as cell to the left?
 		if i > 0 && newBorder[i] == newBorder[i-1] {
-			uf.Union(Cell{g.Height + 1, i},
-				Cell{g.Height + 1, i - 1})
+			uf.UnionCell(1, i, 1, i-1)
 		}
 	}
 
-	whiteMap := make(map[Cell][]int)
-	blackMap := make(map[Cell][]int)
+	whiteMap := make(map[int][]int)
+	blackMap := make(map[int][]int)
 
 	for i := 0; i < g.Width; i++ {
-		r := uf.Find(Cell{g.Height + 1, i})
+		r := uf.FindCell(1, i)
 		if newBorder[i] == 0 {
 			whiteMap[r] = append(whiteMap[r], i)
 		} else {
